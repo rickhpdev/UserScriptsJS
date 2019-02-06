@@ -6,7 +6,6 @@
 // @author       Ricardo
 // @require https://code.jquery.com/jquery-3.3.1.js
 // @match        https://crowdin.com/translate/codeorg/*
-// @grant        https://codepen.io/allurewebsolutions/pen/BRdZdB
 // ==/UserScript==
 
 // Enter an API key from the Google API Console:
