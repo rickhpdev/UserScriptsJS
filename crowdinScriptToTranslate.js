@@ -60,6 +60,7 @@ var mountFeatureIcon = function(){
 function makeApiRequest(endpoint, data, type, authNeeded) {
   var url = "https://www.googleapis.com/language/translate/v2/" + endpoint;
   url += "?key=" + apiKey;
+  url += "&format=text";
 
   // If not listing languages, send text to translate
   if (endpoint !== endpoints.languages) {
