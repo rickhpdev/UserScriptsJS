@@ -1,189 +1,204 @@
 // ==UserScript==
 // @name         Crowdin Translate Script
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      1.0
 // @description  Script to help translating
-// @author       Ricardo Henrique
-// @require https://code.jquery.com/jquery-3.3.1.js
+// @author       Ricardo Henrique (Avenue Code)
+// @contributor  Eduardo Mendes (Avenue Code)
+// @require      https://code.jquery.com/jquery-3.3.1.js
 // @match        https://crowdin.com/translate/codeorg/*
 // ==/UserScript==
 
-// Enter an API key from the Google API Console:
-//https://console.developers.google.com/apis/credentials
-const apiKey = "XXXXXXXXXXX_YYYYYYYYY";
+// Please DO NOT SHARE THIS TOKEN and DO NOT post anywhere, I generated it only for this API and our usage.
+const apiKey = "X";
 
 // Set endpoints
 const endpoints = {
-  translate: "",
-  detect: "detect",
-  languages: "languages"
+    translate: "",
+    detect: "detect",
+    languages: "languages"
 };
 
-$(function() {
-  setTimeout(function(){ mountFeatureIcon(); makeUsabilityChanges();}, 2000);
-  var translationObj = {};
+$(() => {
+    setTimeout(initializeScript, 2000);
+    let translationObj = {};
 
-  // Popuplate source and target language dropdowns
-  //getLanguages();
-  $(document)
+    // Popuplate source and target language dropdowns
+    //getLanguages();
+    $(document)
     // Bind translate function to translate button (#translation_text_container .editor-pane-title)
-    .on("click", "#translateAcLink", function() {
-      translationObj = {
-        sourceLang: "en",
-        targetLang: "pt",
-        textToTranslate: $("#source_phrase_container .singular").text()
-      };
+        .on("click", "#translateAcLink", () => {
+        translationObj = {
+            sourceLang: "en",
+            targetLang: "pt",
+            textToTranslate: $("#source_phrase_container .singular").text()
+        };
 
-      if (translationObj.targetLang !== null) {
-        translate(translationObj);
-      } else {
-        alert("Please select a target language");
-      }
+        if (translationObj.targetLang !== null) {
+            translate(translationObj);
+        } else {
+            alert("Please select a target language");
+        }
     })
     // Bind detect function to detect button
-    .on("click", "button.detect", function() {
-      translationObj = {
-        textToTranslate: $("textarea").val()
-      };
+        .on("click", "button.detect", () => {
+        translationObj = {
+            textToTranslate: $("textarea").val()
+        };
 
-      detect(translationObj);
+        detect(translationObj);
     });
 });
 
-var mountFeatureIcon = function(){
-    var htmlLink = '<a class="featureIcons" id="translateAcLink" href="#"><img src="https://static.getjar.com/icon-50x50/c3/923189_thm.png" alt="Smiley face" height="25" width="25"></a>&nbsp;&nbsp;';
-    var imgLoadingAjax = '<img class="featureIcons" style="display: none;" id="linkLoadingAjax" src="https://loading.io/spinners/spin/lg.ajax-spinner-gif.gif" alt="Smiley face" height="30" width="30">&nbsp;&nbsp;';
+const initializeScript = () => {
+    mountFeatureIcon();
+    makeUsabilityChanges();
+}
+
+// Translate
+const translate = (data) => {
+    makeApiRequest(endpoints.translate, data, "GET", false);
+};
+
+const mountFeatureIcon = () => {
+    const style = "margin-right: 15px; margin-left: -3px;";
+    const loadingIcon = "https://loading.io/spinners/blocks/index.rotating-squares-preloader-gif.gif";
+    const translateIcon = "https://png.icons8.com/google-translate/4fa250";
+    const imgLoadingAjax = `<img class="featureIcons" style="display: none; ${style}" id="linkLoadingAjax" src="${loadingIcon}" alt="Loading" height="35" width="35">`;
+    const imgTranslateButton = `<img src="${translateIcon}" alt="Translate" height="35" width="35"></a>`;
+    const htmlLink = `<a class="featureIcons" id="translateAcLink" href="#" style="${style}">${imgTranslateButton}`;
+
     $("#suggest_translation").before(htmlLink).before(imgLoadingAjax);
 };
 
 // Abstract API request function
-function makeApiRequest(endpoint, data, type, authNeeded) {
-  var url = "https://www.googleapis.com/language/translate/v2/" + endpoint;
-  url += "?key=" + apiKey;
-  url += "&format=text";
+const makeApiRequest = (endpoint, data, type, authNeeded) => {
+    let url = "https://www.googleapis.com/language/translate/v2/" + endpoint;
+    url += "?key=" + apiKey;
+    url += "&format=text";
 
-  // If not listing languages, send text to translate
-  if (endpoint !== endpoints.languages) {
-    url += "&q=" + encodeURI(data.textToTranslate);
-  }
+    // If not listing languages, send text to translate
+    if (endpoint !== endpoints.languages) {
+        url += "&q=" + encodeURI(data.textToTranslate);
+    }
 
-  // If translating, send target and source languages
-  if (endpoint === endpoints.translate) {
-    url += "&target=" + data.targetLang;
-    url += "&source=" + data.sourceLang;
-  }
+    // If translating, send target and source languages
+    if (endpoint === endpoints.translate) {
+        url += "&target=" + data.targetLang;
+        url += "&source=" + data.sourceLang;
+    }
 
     $.ajax({
-    url: url,
-    //type: type || "GET",
-    type: "POST",
-    data: data ? JSON.stringify(data) : "",
-    dataType: "json",
-    beforeSend: function() {
-       $('.featureIcons').toggle();
-    },
-    success: function (resp) {
-        $("#translation").val(resp.data.translations[0].translatedText).focus();
-        $("#suggest_translation").prop(`disabled`, false);
-    },
-    complete: function() {
-      $('.featureIcons').toggle();
-    },
-    error: function (error) {
-       alert("Error During Google API Call");
-    },
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json"
-    }
-  });
-}
-
-// Translate
-function translate(data) {
-  makeApiRequest(endpoints.translate, data, "GET", false);
-}
-
-var makeUsabilityChanges = function(){
-    applyShortcut();
-
-    var $toolBarElement = $('#prev_translation').parent();
-    $toolBarElement.removeClass('pull-left').addClass('pull-right');
-};
-
-var applyShortcut = function(){
-    $(document).keydown(function(evt){
-        if (evt.keyCode==18){
-            //evt.preventDefault();
-            eventFire(document.getElementById('translateAcLink'), 'click')
+        url: url,
+        //type: type || "GET",
+        type: "POST",
+        data: data ? JSON.stringify(data) : "",
+        dataType: "json",
+        beforeSend: toggleFeatureIcons,
+        success: onRequestSuccess,
+        complete: toggleFeatureIcons,
+        error: errorAlert,
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json"
         }
     });
 };
 
-// Detect language
-function detect(data) {
-  makeApiRequest(endpoints.detect, data, "GET", false).success(function(resp) {
-    var source = resp.data.detections[0][0].language;
-    var conf = resp.data.detections[0][0].confidence.toFixed(2) * 100;
+const toggleFeatureIcons = () => {
+    $('.featureIcons').toggle();
+};
 
-    $(".source-lang option")
-      .filter(function() {
-        return $(this).val() === source; //To select Blue
-      })
-      .prop("selected", true);
-    $.when(getLanguageNames()).then(function(data) {
-      $("p.target").text(data[source] + " with " + conf + "% confidence");
+const onRequestSuccess = (resp) => {
+    $("#translation").val(resp.data.translations[0].translatedText).focus();
+    $("#suggest_translation").prop(`disabled`, false);
+};
+
+const errorAlert = (error) => {
+    alert("Error During Google API Call");
+};
+
+const makeUsabilityChanges = () =>{
+    //applyShortcut();
+
+    const $toolBarElement = $('#prev_translation').parent();
+    $toolBarElement.removeClass('pull-left').addClass('pull-right');
+};
+
+const applyShortcut = () => {
+    $(document).keydown(triggerTranslateOnAltPress);
+};
+
+const triggerTranslateOnAltPress = (e) => {
+    if (e.keyCode == 18) {
+        //evt.preventDefault();
+        eventFire(document.getElementById('translateAcLink'), 'click')
+    }
+};
+
+const eventFire = (el, etype) => {
+    if (el.fireEvent) {
+        el.fireEvent('on' + etype);
+    } else {
+        const evObj = document.createEvent('Events');
+        evObj.initEvent(etype, true, false);
+        el.dispatchEvent(evObj);
+    }
+};
+
+// Detect language
+const detect = (data) => {
+    makeApiRequest(endpoints.detect, data, "GET", false).success((resp) => {
+        const source = resp.data.detections[0][0].language;
+        const conf = resp.data.detections[0][0].confidence.toFixed(2) * 100;
+
+        $(".source-lang option")
+            .filter(() => { $(this).val() === source }) //To select Blue
+            .prop("selected", true);
+
+        $.when(getLanguageNames).then((data) => { $("p.target").text(`${data[source]} with ${conf}% confidence`); });
+        $("h2.translation-heading").hide();
+        $("h2.detection-heading, p").show();
     });
-    $("h2.translation-heading").hide();
-    $("h2.detection-heading, p").show();
-  });
-}
+};
 
 // Get languages
-function getLanguages() {
-  makeApiRequest(endpoints.languages, null, "GET", false).success(function(
-    resp
-  ) {
-    $.when(getLanguageNames()).then(function(data) {
-      $.each(resp.data.languages, function(i, obj) {
-        $(".source-lang, .target-lang").append(
-          '<option value="' +
-            obj.language +
-            '">' +
-            data[obj.language] +
-            "</option>"
-        );
-      });
-    });
-  });
-}
+const getLanguages = () => {
+    makeApiRequest(endpoints.languages, null, "GET", false).success(createLanguagesList);
+};
+
+const createLanguagesList = (resp) => {
+    $.when(getLanguageNames).then(buildLangList);
+};
 
 // Convert country code to country name
-function getLanguageNames() {
-  return $.getJSON("https://api.myjson.com/bins/155kj1");
-}
-
-var eventFire = function (el, etype){
-  if (el.fireEvent) {
-    el.fireEvent('on' + etype);
-  } else {
-    var evObj = document.createEvent('Events');
-    evObj.initEvent(etype, true, false);
-    el.dispatchEvent(evObj);
-  }
+const getLanguageNames = () => {
+    return $.getJSON("https://api.myjson.com/bins/155kj1");
 };
 
-var buildHtmlInText = function(tagName, tagConteudo, tagClasses, tagOutros){
-    return `<${tagName} class="${returnIfVal(tagClasses)}" ${returnIfVal(tagOutros)}>
-               ${returnIfVal(tagConteudo)}
-            </${tagName}>`;
+const buildLangList = (resp) => {
+    $.each(resp.data.languages, displayLangOption);
 };
 
-var returnIfVal = function(prop){
+const displayLangOption = (obj) => {
+    $(".source-lang, .target-lang").append(
+        '<option value="' +
+        obj.language +
+        '">' +
+        data[obj.language] +
+        "</option>"
+    );
+};
+
+const buildHtmlInText = (tagName, tagContent, tagClasses, tagOthers) => {
+    return `<${tagName} class="${returnIfVal(tagClasses)}" ${returnIfVal(tagOthers)}>${returnIfVal(tagContent)}</${tagName}>`;
+};
+
+const returnIfVal = (prop) => {
     return prop ? prop : "";
 };
 
-var selectText = function (node) {
+const selectText = (node) => {
     node = document.getElementById(node);
 
     if (document.body.createTextRange) {
@@ -201,11 +216,11 @@ var selectText = function (node) {
     }
 };
 
-var buildAndAddCssClassInDOM = function(nomeClasse, propriedadesClasse){
-    var style = document.createElement('style');
+const buildAndAddCssClassInDOM = (className, classProperties) => {
+    let style = document.createElement('style');
     style.type = 'text/css';
     style.innerHTML = '.cssClass { color: #F00; }';
-    style.innerHTML = `.${nomeClasse} { ${propriedadesClasse} }`;
+    style.innerHTML = `.${className} { ${classProperties} }`;
     document.getElementsByTagName('head')[0].appendChild(style);
 };
 
